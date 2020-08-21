@@ -103,6 +103,8 @@ namespace EarTrumpet
             _trayIcon.SetTooltip(_collectionViewModel.GetTrayToolTip());
             _trayIcon.IsVisible = true;
 
+            new ArduinoControl();
+
             DisplayFirstRunExperience();
         }
 
