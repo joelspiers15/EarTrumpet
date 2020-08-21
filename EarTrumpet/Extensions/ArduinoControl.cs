@@ -126,6 +126,7 @@ namespace EarTrumpet.Extensions
             priorities.Add("Default", 5);
             priorities.Add("steam", 6);
             priorities.Add("System Sounds", 10);
+            priorities.Add("Blizzard Battle.net", 11);
             priorities.Add("SocialClubHelper", 11);
             priorities.Add("Launcher", 11);
 
@@ -135,11 +136,14 @@ namespace EarTrumpet.Extensions
             nameOverrides.Add("steam", "Steam");
             nameOverrides.Add("VLC media player", "VLC");
             nameOverrides.Add("Red Dead Redemption 2", "Red Dead 2");
+            nameOverrides.Add("conhost", "Console");
+            nameOverrides.Add("Blizzard Battle.net", "Battle.net");
 
             //Color overrides
             colorOverrides.Add("Spotify", 7852);
             colorOverrides.Add("Discord", 29787);
             colorOverrides.Add("Google Chrome", 55879);
+            colorOverrides.Add("steam", 16);
 
             //Serial port setup
             serialPort = new SerialPort();
@@ -147,27 +151,26 @@ namespace EarTrumpet.Extensions
             serialPort.PortName = "COM5";
 
             //Data model setup
-            arduinoDataPacket = arduinoDataPacketFactory();
+            //arduinoDataPacket = arduinoDataPacketFactory();
 
             this.deviceManager.Default.Groups.CollectionChanged += handleNewSession;
 
             try
             {
-                serialPort.Open();
+                //serialPort.Open();
             } catch
             {
                 Console.WriteLine("ERROR OPENING SERIAL PORT");
             }
 
-            sendUpdatePacket();
+            //sendUpdatePacket();
 
-            Thread readThread = new Thread(ReadSerial);
-            readThread.Start();
+            Thread connectThread = new Thread(SerialConnectThread);
+            connectThread.Start();
         }
 
         public void handleNewSession(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            arduinoDataPacket = arduinoDataPacketFactory();
+        { 
             sendUpdatePacket();
         }
 
@@ -201,17 +204,55 @@ namespace EarTrumpet.Extensions
             return toReturn;
         }
 
+        public void handleDisconnect()
+        {
+            Console.WriteLine("Serial port write error. Closing port");
+            serialPort.Close();
+            Thread connectThread = new Thread(SerialConnectThread);
+            connectThread.Start();
+        }
+
         public bool sendUpdatePacket()
         {
-            string packet = JsonConvert.SerializeObject(arduinoDataPacket);
-            Console.WriteLine("Serial -->: " + packet);
-            serialPort.Write(packet);
-            return false;
+            try
+            {
+                arduinoDataPacket = arduinoDataPacketFactory();
+                string packet = JsonConvert.SerializeObject(arduinoDataPacket);
+                Console.WriteLine("Serial -->: " + packet);
+                serialPort.Write(packet);
+                return true;
+            } catch(Exception)
+            {
+                handleDisconnect();
+                return false;
+            }
+        }
+
+        public void SerialConnectThread()
+        {
+            while (true)
+            {
+                try
+                {
+                    Console.WriteLine("Attempting serial connection");
+                    serialPort.Open();
+                    Console.WriteLine("Serial port opened");
+                    Thread readThread = new Thread(ReadSerial);
+                    Thread.Sleep(15000);
+                    sendUpdatePacket();
+                    readThread.Start();
+                    return;
+                }
+                catch (Exception)
+                {
+                    Thread.Sleep(5000);
+                }
+            }
         }
 
         public void ReadSerial()
         {
-            while (true)
+            while (serialPort.IsOpen)
             {
                 try
                 {
@@ -219,7 +260,12 @@ namespace EarTrumpet.Extensions
                     Console.WriteLine("Serial <--: " + message);
                     HandleJsonMessage(message);
                 }
-                catch (Exception) { }
+                catch (System.IO.IOException)
+                {
+                    handleDisconnect();
+                }
+                catch (Exception)
+                { }
             }
         }
 
