@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 using System.Drawing;
 using EarTrumpet.Interop;
 using System.Text;
+using System.IO;
 
 namespace EarTrumpet.Extensions
 {
@@ -287,13 +288,30 @@ namespace EarTrumpet.Extensions
             }
         }
 
+        public Icon iconFromPath(string path)
+        {
+            Icon toReturn;
+            try
+            {
+                // Get System icon
+                StringBuilder iconPath = new StringBuilder(path);
+                int iconIndex = Shlwapi.PathParseIconLocationW(iconPath);
+                toReturn = IconHelper.LoadIconResource(iconPath.ToString(), iconIndex, 128, 128);
+            }
+            catch(Exception)
+            {
+                toReturn = Icon.ExtractAssociatedIcon(path);
+            }
+            return toReturn;
+        }
+
         public void sendIcon(string path)
         {
             int iconSize = 128;
             Bitmap iconBitmap;
             try
             {
-                Icon icon = Icon.ExtractAssociatedIcon(path.ToString());
+                Icon icon = iconFromPath(path);
                 iconBitmap = icon.ToBitmap();
             }
             catch(Exception)
