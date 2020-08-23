@@ -130,6 +130,8 @@ namespace EarTrumpet.Extensions
             priorities.Add("Blizzard Battle.net", 11);
             priorities.Add("SocialClubHelper", 11);
             priorities.Add("Launcher", 11);
+            priorities.Add("Razer Synapse", 12);
+            priorities.Add("ChromaVisualizer", 12);
 
             //Name overrides
             nameOverrides.Add("Google Chrome", "Chrome");
@@ -139,16 +141,20 @@ namespace EarTrumpet.Extensions
             nameOverrides.Add("Red Dead Redemption 2", "Red Dead 2");
             nameOverrides.Add("conhost", "Console");
             nameOverrides.Add("Blizzard Battle.net", "Battle.net");
+            nameOverrides.Add("Razer Synapse", "Synapse");
+            nameOverrides.Add("TwitchUI", "Twitch");
 
             //Color overrides
             colorOverrides.Add("Spotify", 7852);
             colorOverrides.Add("Discord", 29787);
             colorOverrides.Add("Google Chrome", 55879);
-            colorOverrides.Add("steam", 16);
+            colorOverrides.Add("Steam", 16);
+            colorOverrides.Add("Red Dead Redemption 2", 63488);
+            colorOverrides.Add("VLC media player", 62698);
 
             //Serial port setup
             serialPort = new SerialPort();
-            serialPort.BaudRate = 57600;
+            serialPort.BaudRate = 74880;
             serialPort.PortName = "COM5";
 
             //Data model setup
