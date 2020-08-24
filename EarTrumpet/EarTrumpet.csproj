@@ -114,7 +114,10 @@
     <Compile Include="Diagnosis\SnapshotData.cs" />
     <Compile Include="Extensibility\Hosting\AddonHost.cs" />
     <Compile Include="Extensibility\Hosting\AddonResolver.cs" />
-    <Compile Include="Extensions\ArduinoControl.cs" />
+    <Compile Include="Extensions\ArduinoExtension\ArduinoSerialController.cs" />
+    <Compile Include="Extensions\ArduinoExtension\Helpers.cs" />
+    <Compile Include="Extensions\ArduinoExtension\ArduinoExtension.cs" />
+    <Compile Include="Extensions\ArduinoExtension\Models.cs" />
     <Compile Include="Extensions\EventBinding\EventBindingExtension.cs" />
     <Compile Include="Extensions\EventBinding\HandledEventBindingExtension.cs" />
     <Compile Include="Extensions\FrameworkElementExtensions.cs" />
@@ -365,7 +368,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="App.manifest" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="prebuild.ps1" />
     <None Include="README.md" />
   </ItemGroup>
