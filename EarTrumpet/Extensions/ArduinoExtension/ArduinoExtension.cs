@@ -40,7 +40,8 @@ public class ArduinoExtension
     {
         // Get device manager and setup listeners
         this.deviceManager = WindowsAudioFactory.Create(AudioDeviceKind.Playback);
-        this.deviceManager.Default.Groups.CollectionChanged += handleStateChange;
+        this.deviceManager.DefaultChanged += handleDefaultDeviceChange;
+        this.deviceManager.Default.Groups.CollectionChanged += handleAppSessionChange;
 
         colorsUnused = new List<UInt16>(colorsBaseBank);
 
@@ -120,7 +121,13 @@ public class ArduinoExtension
         return toReturn;
     }
 
-    public void handleStateChange(object sender, NotifyCollectionChangedEventArgs e)
+    public void handleDefaultDeviceChange(object sender, IAudioDevice newDevice)
+    {
+        serialController.sendUpdatePacket();
+        newDevice.Groups.CollectionChanged += handleAppSessionChange;
+    }
+
+    public void handleAppSessionChange(object sender, NotifyCollectionChangedEventArgs e)
     { 
         serialController.sendUpdatePacket();
     }
