@@ -214,7 +214,11 @@ namespace EarTrumpet.Extensions
         public void handleDisconnect()
         {
             Console.WriteLine("Serial port write error. Closing port");
-            serialPort.Close();
+            try
+            {
+                serialPort.Close();
+            } catch(Exception)
+            {}
             Thread connectThread = new Thread(SerialConnectThread);
             connectThread.Start();
         }
@@ -300,20 +304,24 @@ namespace EarTrumpet.Extensions
             try
             {
                 // Get System icon
-                StringBuilder iconPath = new StringBuilder(path);
+                StringBuilder iconPath = new StringBuilder((path.Contains(",") ? path : path + ",1"));
                 int iconIndex = Shlwapi.PathParseIconLocationW(iconPath);
                 toReturn = IconHelper.LoadIconResource(iconPath.ToString(), iconIndex, 128, 128);
             }
             catch(Exception)
             {
+                
                 toReturn = Icon.ExtractAssociatedIcon(path);
+ 
             }
             return toReturn;
         }
 
         public void sendIcon(string path)
         {
+            var watch = new System.Diagnostics.Stopwatch();
             int iconSize = 128;
+
             Bitmap iconBitmap;
             try
             {
@@ -324,37 +332,51 @@ namespace EarTrumpet.Extensions
             {
                 iconBitmap = new Bitmap(iconSize, iconSize);
             }
+            watch.Start();
             int scaling = iconSize / iconBitmap.Height;
             for (int y = 0; y < iconBitmap.Height; y++)
             {
                 for (int yScale = 0; yScale < scaling; yScale++)
                 {
+                    List<byte>  line = new List<byte>();
                     for (int x = 0; x < iconBitmap.Width; x++)
                     {
                         var rgbPixel = iconBitmap.GetPixel(x, y);
-
-                        if (rgbPixel.R != 0)
-                        {
-
-                        }
 
                         byte r = Convert.ToByte(map(rgbPixel.R, 0, 255, 0, 31));
                         byte g = Convert.ToByte(map(rgbPixel.G, 0, 255, 0, 63));
                         byte b = Convert.ToByte(map(rgbPixel.B, 0, 255, 0, 31));
 
-                        byte msb = Convert.ToByte((r << 3) | (g >> 3));
-                        byte lsb = Convert.ToByte(255 & ((g << 5) | b));
-
-                        byte[] bytes = new byte[] { msb, lsb };
+                        //byte metaData = Convert.ToByte(y * scaling + yScale);
+                        byte color1 = Convert.ToByte((r << 3) | (g >> 3));
+                        byte color2 = Convert.ToByte(255 & ((g << 5) | b));
+                        
+                        //byte[] bytes = new byte[] { /*metaData,*/ color1, color2 };
 
                         for (int xScale = 0; xScale < scaling; xScale++)
                         {
-                            serialPort.Write(bytes, 0, 2);
+                            line.Add(color1);
+                            line.Add(color2);
+                            //serialPort.Write(bytes, 0, bytes.Length);
                         }
+                    }
+
+                    serialPort.Write(line.ToArray(), 0, line.Count);
+
+                    //Expect acknowledgement of line
+                    while (serialPort.BytesToRead < 1)
+                    { Thread.Sleep(1); }
+                    Byte ack = (Byte)serialPort.ReadByte();
+                    if (ack != 0xFF)
+                    {
+                        Console.WriteLine("Ack not 0xFF, ending transmission");
+                        return;
                     }
                 }
             }
-
+            watch.Stop();
+            Console.WriteLine("Finished transmission, average line write ms = " + watch.ElapsedMilliseconds / iconSize);
+            Console.WriteLine(String.Format("{0:F2} KB/S", ((iconSize * iconSize * 2.0)/ 1000) / (watch.ElapsedMilliseconds / 1000)));
         }
 
         private double map(int value, int min, int max, int minScale, int maxScale)
