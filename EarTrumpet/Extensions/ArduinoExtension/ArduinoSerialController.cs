@@ -120,11 +120,13 @@ public class ArduinoSerialController
      */
     public void sendIcon(Icon icon, int iconSize=128)
     {
-        // Turn icon into bitmap
         Bitmap iconBitmap;
         if(icon != null) { 
+            // Convert and scale icon to 128x128px bitmap
             iconBitmap = icon.ToBitmap();
+            iconBitmap = new Bitmap(iconBitmap, iconSize, iconSize);
         } else {
+            // Use black bitmap if icon is null
             iconBitmap = new Bitmap(iconSize, iconSize);
         }
 
@@ -133,46 +135,41 @@ public class ArduinoSerialController
         watch.Start();
 
         //Transfer image
-        int scaling = iconSize / iconBitmap.Height;
         for (int y = 0; y < iconBitmap.Height; y++)
         {
-            for (int yScale = 0; yScale < scaling; yScale++)
+            List<byte> row = new List<byte>();
+            for (int x = 0; x < iconBitmap.Width; x++)
             {
-                List<byte> row = new List<byte>();
-                for (int x = 0; x < iconBitmap.Width; x++)
-                {
-                    //Conversion from RGB to 16 bit R5G6B5
-                    var rgbPixel = iconBitmap.GetPixel(x, y);
+                //Conversion from RGB to 16 bit R5G6B5
+                var rgbPixel = iconBitmap.GetPixel(x, y);
 
-                    byte r = Convert.ToByte(map(rgbPixel.R, 0, 255, 0, 31));
-                    byte g = Convert.ToByte(map(rgbPixel.G, 0, 255, 0, 63));
-                    byte b = Convert.ToByte(map(rgbPixel.B, 0, 255, 0, 31));
+                byte r = Convert.ToByte(map(rgbPixel.R, 0, 255, 0, 31));
+                byte g = Convert.ToByte(map(rgbPixel.G, 0, 255, 0, 63));
+                byte b = Convert.ToByte(map(rgbPixel.B, 0, 255, 0, 31));
                
-                    byte color1 = Convert.ToByte((r << 3) | (g >> 3));
-                    byte color2 = Convert.ToByte(255 & ((g << 5) | b));
+                byte color1 = Convert.ToByte((r << 3) | (g >> 3));
+                byte color2 = Convert.ToByte(255 & ((g << 5) | b));
 
-                    //Add pixel bytes to rob of pixels
-                    for (int xScale = 0; xScale < scaling; xScale++)
-                    {
-                        row.Add(color1);
-                        row.Add(color2);
-                    }
-                }
+                //Add pixel bytes to row of pixels
+                row.Add(color1);
+                row.Add(color2);
+            }
                 
-                // Send row of pixels
-                serialPort.Write(row.ToArray(), 0, row.Count);
+            // Send row of pixels
+            serialPort.Write(row.ToArray(), 0, row.Count);
 
-                //Expect acknowledgement of line
-                while (serialPort.BytesToRead < 1)
-                { Thread.Sleep(1); }
-                Byte ack = (Byte)serialPort.ReadByte();
-                if (ack != 0xFF)
-                {
-                    Console.WriteLine("Ack not 0xFF, ending transmission");
-                    return;
-                }
+            //Expect acknowledgement of line
+            while (serialPort.BytesToRead < 1)
+            { Thread.Sleep(1); }
+            Byte ack = (Byte)serialPort.ReadByte();
+            if (ack != 0xFF)
+            {
+                Console.WriteLine("Ack not 0xFF, ending transmission");
+                return;
             }
         }
+
+        // Finish up
         watch.Stop();
         Console.WriteLine("Finished transmission, average line write ms = " + watch.ElapsedMilliseconds / iconSize);
         Console.WriteLine(String.Format("{0:F2} KB/S", ((iconSize * iconSize * 2.0) / 1000) / (watch.ElapsedMilliseconds / 1000)));

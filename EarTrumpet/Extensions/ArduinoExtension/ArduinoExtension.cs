@@ -13,12 +13,6 @@ using EarTrumpet.Extensions;
 
 public class ArduinoExtension
 {
-    public static class foo
-    {
-        [DllImport("Shell32.dll", EntryPoint = "SHDefExtractIconW")]
-        private static extern int SHDefExtractIconW([MarshalAs(UnmanagedType.LPTStr)] string pszIconFile, int iIndex, uint uFlags, ref IntPtr phiconLarge, ref IntPtr phiconSmall, uint nIconSize);
-    }
-
     IAudioDeviceManager deviceManager;
 
     ArduinoDataPacket arduinoDataPacket;
@@ -118,6 +112,7 @@ public class ArduinoExtension
         }
         toReturn.size = toReturn.applications.Count;
 
+        arduinoDataPacket = toReturn;
         return toReturn;
     }
 
