@@ -117,6 +117,7 @@
     <Compile Include="Diagnosis\SnapshotData.cs" />
     <Compile Include="Extensibility\Hosting\AddonHost.cs" />
     <Compile Include="Extensibility\Hosting\AddonResolver.cs" />
+    <Compile Include="Extensions\ArduinoExtension\ColorExtractor.cs" />
     <Compile Include="Extensions\ArduinoExtension\ArduinoSerialController.cs" />
     <Compile Include="Extensions\ArduinoExtension\Helpers.cs" />
     <Compile Include="Extensions\ArduinoExtension\ArduinoExtension.cs" />

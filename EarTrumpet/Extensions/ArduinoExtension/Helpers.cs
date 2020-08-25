@@ -7,13 +7,14 @@ using System.Text;
 using static Models;
 using System.Runtime.InteropServices;
 using TsudaKageyu;
+using System.Collections.Generic;
 
 public static class Helpers
 {
     /*
      * Attempt to get an icon from an application path
      */
-    public static Icon iconFromPath(string path)
+    public static Bitmap iconBmapFromPath(string path)
     {
         Icon toReturn = null;
         try
@@ -43,7 +44,60 @@ public static class Helpers
 
             toReturn = allIcons[bestIcon];
         }
+        return toReturn.ToBitmap();
+    }
+
+    /*
+    * Converts a Color object into a 16 bit R5G6B5 int
+    */
+    public static UInt16 colorTo16bit(Color color)
+    {
+        byte[] colorBytes = colorTo16bitByteArray(color);
+
+        // Need to swap endianness since ToUint16 uses system default (little endian in my case)
+        return BitConverter.ToUInt16(new byte[] { colorBytes[1], colorBytes[0]}, 0);
+    }
+
+    /*
+     * Converts a Color object into a 16 bit R5G6B5 byte array
+     */
+    public static byte[] colorTo16bitByteArray(Color color)
+    {
+        byte[] toReturn = new byte[2];
+
+        byte r = Convert.ToByte(map(color.R, 0, 255, 0, 31));
+        byte g = Convert.ToByte(map(color.G, 0, 255, 0, 63));
+        byte b = Convert.ToByte(map(color.B, 0, 255, 0, 31));
+
+        toReturn[0] = Convert.ToByte((r << 3) | (g >> 3));
+        toReturn[1] = Convert.ToByte(255 & ((g << 5) | b));
+
         return toReturn;
+    }
+
+    public static Color colorFromBitmap(Bitmap source)
+    {
+        ColorExtractor.ColorSet set = ColorExtractor.SelectColors(source);
+        Color toReturn = set.Accent1;
+
+
+        // Ensure accent 1 isn't gray
+        int grayTolerance = 10;
+        if(
+            closeTo(toReturn.R, toReturn.G, grayTolerance) && 
+            closeTo(toReturn.G, toReturn.B, grayTolerance) && 
+            closeTo(toReturn.B, toReturn.R, grayTolerance))
+        {
+            toReturn = set.Accent2;
+        }
+        return toReturn;
+    }
+
+    public static bool closeTo(int source, int target, int tolerance)
+    {
+        int min = target - tolerance;
+        int max = target + tolerance;
+        return (source >= min && source <= max);
     }
 
     public static double map(int value, int min, int max, int minScale, int maxScale)

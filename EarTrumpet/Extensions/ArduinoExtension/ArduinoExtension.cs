@@ -15,17 +15,12 @@ public class ArduinoExtension
 {
     IAudioDeviceManager deviceManager;
 
-    ArduinoDataPacket arduinoDataPacket;
+    public ArduinoDataPacket arduinoDataPacket;
     ArduinoSerialController serialController;
 
     Dictionary<string, int> priorities = new Dictionary<string, int>();
     Dictionary<string, string> nameOverrides = new Dictionary<string, string>();
     Dictionary<string, UInt16> colorOverrides = new Dictionary<string, UInt16>();
-
-    //Random color bank
-    // Blue, Red, Green, Cyan, Magenta, Yellow
-    List<UInt16> colorsBaseBank = new List<UInt16> { 31, 63488, 2016, 2047, 63519, 65504 };
-    List<UInt16> colorsUnused;
 
     /*
      * Constructor
@@ -37,8 +32,6 @@ public class ArduinoExtension
         this.deviceManager.DefaultChanged += handleDefaultDeviceChange;
         this.deviceManager.Default.Groups.CollectionChanged += handleAppSessionChange;
 
-        colorsUnused = new List<UInt16>(colorsBaseBank);
-
         //Priorities list
         priorities.Add("Spotify", 0);
         priorities.Add("Google Chrome", 1);
@@ -49,6 +42,7 @@ public class ArduinoExtension
         priorities.Add("Blizzard Battle.net", 11);
         priorities.Add("SocialClubHelper", 11);
         priorities.Add("Launcher", 11);
+        priorities.Add("Origin", 11);
         priorities.Add("Razer Synapse", 12);
         priorities.Add("ChromaVisualizer", 12);
 
@@ -63,16 +57,8 @@ public class ArduinoExtension
         nameOverrides.Add("Razer Synapse", "Synapse");
         nameOverrides.Add("TwitchUI", "Twitch");
 
-        //Color overrides
-        colorOverrides.Add("Spotify", 7852);
-        colorOverrides.Add("Discord", 29787);
-        colorOverrides.Add("Google Chrome", 55879);
-        colorOverrides.Add("Steam", 16);
-        colorOverrides.Add("Red Dead Redemption 2", 63488);
-        colorOverrides.Add("VLC media player", 62698);
-
         //Data model setup
-        arduinoDataPacket = getDataPacket();
+        refreshDataPacket();
 
         //Serial port setup
         serialController = new ArduinoSerialController(this);
@@ -81,20 +67,29 @@ public class ArduinoExtension
     /*
      * Generates a data packet based on current default audio device
      */
-    public ArduinoDataPacket getDataPacket()
+    public void refreshDataPacket()
     {
         ArduinoDataPacket toReturn = new ArduinoDataPacket();
 
         // Pull list of application audio sessions from default devices
         IAudioDevice device = deviceManager.Default;
         HashSet<IAudioDeviceSession> sessions = device.Groups.ToSet();
-    
+
         // Add each application audio session to ArduinoDataPacket
         foreach (IAudioDeviceSession session in sessions)
         {
             string title = session.DisplayName;
             int priority = priorities.ContainsKey(title) ? priorities[title] : priorities["Default"];
-            UInt16 color = colorOverrides.ContainsKey(title) ? colorOverrides[title] : randomColor();
+
+            Bitmap icon = iconBmapFromPath(session.IconPath);
+            UInt16 color;
+            if (icon != null)
+            {
+                color = colorTo16bit(colorFromBitmap(icon));
+            } else
+            {
+                color = randomColor();
+            }
 
             if (nameOverrides.ContainsKey(title))
             {
@@ -113,17 +108,18 @@ public class ArduinoExtension
         toReturn.size = toReturn.applications.Count;
 
         arduinoDataPacket = toReturn;
-        return toReturn;
     }
 
     public void handleDefaultDeviceChange(object sender, IAudioDevice newDevice)
     {
+        refreshDataPacket();
         serialController.sendUpdatePacket();
         newDevice.Groups.CollectionChanged += handleAppSessionChange;
     }
 
     public void handleAppSessionChange(object sender, NotifyCollectionChangedEventArgs e)
-    { 
+    {
+        refreshDataPacket();
         serialController.sendUpdatePacket();
     }
 
@@ -137,13 +133,16 @@ public class ArduinoExtension
         {
             case "icon_request":
                 IconRequest iconRequest = JsonConvert.DeserializeObject<IconRequest>(json);
-                Icon toSend = null;
+
+                // Grab bitmap from exe and transmit over serial
+                Bitmap toSend = null;
                 try
                 {
-                    toSend = iconFromPath(arduinoDataPacket.applications[iconRequest.index].getIconPath());
+                    toSend = iconBmapFromPath(arduinoDataPacket.applications[iconRequest.index].getIconPath());
                 }
                 catch (Exception) { }
-                serialController.sendIcon(toSend);
+                serialController.sendIconBmap(toSend);
+
                 break;
 
             case "volume_change":
@@ -161,14 +160,11 @@ public class ArduinoExtension
     {
         //Random color bank
         // Blue, Red, Green, Cyan, Magenta, Yellow
-        if (colorsUnused.Count == 0)
-        {
-            colorsUnused = new List<UInt16>(colorsBaseBank);
-        }
+        List<UInt16> colorsBank = new List<UInt16> { 31, 63488, 2016, 2047, 63519, 65504 };
+
         Random rand = new Random();
-        int index = rand.Next(colorsUnused.Count);
-        UInt16 toReturn = colorsUnused[index];
-        colorsUnused.RemoveAt(index);
+        int index = rand.Next(colorsBank.Count);
+        UInt16 toReturn = colorsBank[index];
 
         return toReturn;
     }

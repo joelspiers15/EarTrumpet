@@ -46,6 +46,7 @@ public class ArduinoSerialController
                 Console.WriteLine("Serial port opened");
                 Thread readThread = new Thread(SerialReadThread);
                 Thread.Sleep(15000);
+                mainExtension.refreshDataPacket();
                 sendUpdatePacket();
                 readThread.Start();
                 return;
@@ -103,7 +104,7 @@ public class ArduinoSerialController
         try
         {
             // Serialize data into json object and ship it
-            string packet = JsonConvert.SerializeObject(mainExtension.getDataPacket());
+            string packet = JsonConvert.SerializeObject(mainExtension.arduinoDataPacket);
             Console.WriteLine("Serial -->: " + packet);
             serialPort.Write(packet);
             return true;
@@ -118,13 +119,12 @@ public class ArduinoSerialController
     /*
      * Convert icon to R5G6B5 16 bit color, scale to iconSize, and transmit line by line over serial
      */
-    public void sendIcon(Icon icon, int iconSize=128)
+    public void sendIconBmap(Bitmap icon, int iconSize=128)
     {
         Bitmap iconBitmap;
         if(icon != null) { 
             // Convert and scale icon to 128x128px bitmap
-            iconBitmap = icon.ToBitmap();
-            iconBitmap = new Bitmap(iconBitmap, iconSize, iconSize);
+            iconBitmap = new Bitmap(icon, iconSize, iconSize);
         } else {
             // Use black bitmap if icon is null
             iconBitmap = new Bitmap(iconSize, iconSize);
@@ -143,16 +143,11 @@ public class ArduinoSerialController
                 //Conversion from RGB to 16 bit R5G6B5
                 var rgbPixel = iconBitmap.GetPixel(x, y);
 
-                byte r = Convert.ToByte(map(rgbPixel.R, 0, 255, 0, 31));
-                byte g = Convert.ToByte(map(rgbPixel.G, 0, 255, 0, 63));
-                byte b = Convert.ToByte(map(rgbPixel.B, 0, 255, 0, 31));
-               
-                byte color1 = Convert.ToByte((r << 3) | (g >> 3));
-                byte color2 = Convert.ToByte(255 & ((g << 5) | b));
+                byte[] color16bit = colorTo16bitByteArray(rgbPixel);
 
                 //Add pixel bytes to row of pixels
-                row.Add(color1);
-                row.Add(color2);
+                row.Add(color16bit[0]);
+                row.Add(color16bit[1]);
             }
                 
             // Send row of pixels
