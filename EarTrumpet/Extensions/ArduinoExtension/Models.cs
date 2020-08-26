@@ -102,4 +102,15 @@ public class Models
         public int index;
         public float volume;
     }
+
+    /*
+     * Class to define app override settings
+     */
+    [Serializable()]
+    public class AppOverride
+    {
+        public string name;
+        public string name_override;
+        public int? priority;
+    }
 }

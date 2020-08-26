@@ -5,11 +5,11 @@ using EarTrumpet.DataModel.Audio;
 using Newtonsoft.Json;
 using System.Collections.Specialized;
 using System.Drawing;
-using System.Runtime.InteropServices;
 
 using static Models;
 using static Helpers;
 using EarTrumpet.Extensions;
+using System.IO;
 
 public class ArduinoExtension
 {
@@ -18,9 +18,8 @@ public class ArduinoExtension
     public ArduinoDataPacket arduinoDataPacket;
     ArduinoSerialController serialController;
 
-    Dictionary<string, int> priorities = new Dictionary<string, int>();
-    Dictionary<string, string> nameOverrides = new Dictionary<string, string>();
-    Dictionary<string, UInt16> colorOverrides = new Dictionary<string, UInt16>();
+    const int defaultPriority = 5;
+    Dictionary<String, AppOverride> appOverrides = new Dictionary<string, AppOverride>();
 
     /*
      * Constructor
@@ -32,30 +31,15 @@ public class ArduinoExtension
         this.deviceManager.DefaultChanged += handleDefaultDeviceChange;
         this.deviceManager.Default.Groups.CollectionChanged += handleAppSessionChange;
 
-        //Priorities list
-        priorities.Add("Spotify", 0);
-        priorities.Add("Google Chrome", 1);
-        priorities.Add("Discord", 2);
-        priorities.Add("Default", 5);
-        priorities.Add("steam", 6);
-        priorities.Add("System Sounds", 10);
-        priorities.Add("Blizzard Battle.net", 11);
-        priorities.Add("SocialClubHelper", 11);
-        priorities.Add("Launcher", 11);
-        priorities.Add("Origin", 11);
-        priorities.Add("Razer Synapse", 12);
-        priorities.Add("ChromaVisualizer", 12);
-
-        //Name overrides
-        nameOverrides.Add("Google Chrome", "Chrome");
-        nameOverrides.Add("System Sounds", "System");
-        nameOverrides.Add("steam", "Steam");
-        nameOverrides.Add("VLC media player", "VLC");
-        nameOverrides.Add("Red Dead Redemption 2", "Red Dead 2");
-        nameOverrides.Add("conhost", "Console");
-        nameOverrides.Add("Blizzard Battle.net", "Battle.net");
-        nameOverrides.Add("Razer Synapse", "Synapse");
-        nameOverrides.Add("TwitchUI", "Twitch");
+        using (StreamReader file = File.OpenText("./AppOverrides.json"))
+        {
+            JsonSerializer serializer = new JsonSerializer();
+            List<AppOverride> overrides = (List<AppOverride>)serializer.Deserialize(file, typeof(List<AppOverride>));
+            foreach(AppOverride @override in overrides)
+            {
+                appOverrides.Add(@override.name, @override);
+            }
+        }
 
         //Data model setup
         refreshDataPacket();
@@ -79,7 +63,7 @@ public class ArduinoExtension
         foreach (IAudioDeviceSession session in sessions)
         {
             string title = session.DisplayName;
-            int priority = priorities.ContainsKey(title) ? priorities[title] : priorities["Default"];
+            int priority = defaultPriority;
 
             Bitmap icon = iconBmapFromPath(session.IconPath);
             UInt16 color;
@@ -91,9 +75,16 @@ public class ArduinoExtension
                 color = randomColor();
             }
 
-            if (nameOverrides.ContainsKey(title))
+            if (appOverrides.ContainsKey(title))
             {
-                title = nameOverrides[title];
+                if (appOverrides[title].priority != null)
+                {
+                    priority = (int)appOverrides[title].priority;
+                }
+                if (appOverrides[title].name_override != null)
+                {
+                    title = appOverrides[title].name_override;
+                }
             }
 
             toReturn.applications.Add(new AppData(title, session.Volume, color, session.IconPath, priority, session));
