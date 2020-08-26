@@ -15,6 +15,8 @@ public class ArduinoSerialController
     SerialPort serialPort;
     ArduinoExtension mainExtension;
 
+    private readonly object serialLock = new object();
+
     /*
      * Default constructor
      */
@@ -105,8 +107,11 @@ public class ArduinoSerialController
         {
             // Serialize data into json object and ship it
             string packet = JsonConvert.SerializeObject(mainExtension.arduinoDataPacket);
-            Console.WriteLine("Serial -->: " + packet);
-            serialPort.Write(packet);
+            lock (serialLock)
+            {
+                Console.WriteLine("Serial -->: " + packet);
+                serialPort.Write(packet);
+            }
             return true;
         }
         catch (Exception)
@@ -135,33 +140,38 @@ public class ArduinoSerialController
         watch.Start();
 
         //Transfer image
-        for (int y = 0; y < iconBitmap.Height; y++)
+        lock (serialLock)
         {
-            List<byte> row = new List<byte>();
-            for (int x = 0; x < iconBitmap.Width; x++)
+            for (int y = 0; y < iconBitmap.Height; y++)
             {
-                //Conversion from RGB to 16 bit R5G6B5
-                var rgbPixel = iconBitmap.GetPixel(x, y);
+                List<byte> row = new List<byte>();
+                for (int x = 0; x < iconBitmap.Width; x++)
+                {
+                    //Conversion from RGB to 16 bit R5G6B5
+                    var rgbPixel = iconBitmap.GetPixel(x, y);
 
-                byte[] color16bit = colorTo16bitByteArray(rgbPixel);
+                    byte[] color16bit = colorTo16bitByteArray(rgbPixel);
 
-                //Add pixel bytes to row of pixels
-                row.Add(color16bit[0]);
-                row.Add(color16bit[1]);
+                    //Add pixel bytes to row of pixels
+                    row.Add(color16bit[0]);
+                    row.Add(color16bit[1]);
+                }
+
+                // Send row of pixels
+                serialPort.Write(row.ToArray(), 0, row.Count);
+
+                //Expect acknowledgement of line
+                while (serialPort.BytesToRead < 1)
+                { Thread.Sleep(1); }
+                Byte ack = (Byte)serialPort.ReadByte();
+                if (ack != 0xFF)
+                {
+                    Console.WriteLine("Ack not 0xFF, ending transmission");
+                    return;
+                }
             }
-                
-            // Send row of pixels
-            serialPort.Write(row.ToArray(), 0, row.Count);
-
-            //Expect acknowledgement of line
-            while (serialPort.BytesToRead < 1)
-            { Thread.Sleep(1); }
-            Byte ack = (Byte)serialPort.ReadByte();
-            if (ack != 0xFF)
-            {
-                Console.WriteLine("Ack not 0xFF, ending transmission");
-                return;
-            }
+            // Tell arduino transmission is done
+            serialPort.Write(new byte[] { 0xFF }, 0, 1);
         }
 
         // Finish up
