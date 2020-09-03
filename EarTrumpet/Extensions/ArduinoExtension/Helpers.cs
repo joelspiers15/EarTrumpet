@@ -24,7 +24,7 @@ public static class Helpers
             int iconIndex = Shlwapi.PathParseIconLocationW(iconPath);
             toReturn = IconHelper.LoadIconResource(iconPath.ToString(), iconIndex, 128, 128);
         }
-        catch(Exception)
+        catch (Exception)
         {
             // Use IconExtractor library to try to get a high res icon
             IconExtractor ie = new IconExtractor(path);
@@ -33,10 +33,10 @@ public static class Helpers
 
             // Pick the highest resolution icon with a bit depth >16
             int bestIcon = 0;
-            for(int i = 0; i < allIcons.Length; i++)
+            for (int i = 0; i < allIcons.Length; i++)
             {
                 int curSize = allIcons[i].Size.Height;
-                if(curSize > allIcons[bestIcon].Size.Height && IconUtil.GetBitCount(allIcons[i]) >= 16)
+                if (curSize > allIcons[bestIcon].Size.Height && IconUtil.GetBitCount(allIcons[i]) >= 16)
                 {
                     bestIcon = i;
                 }
@@ -80,17 +80,22 @@ public static class Helpers
         ColorExtractor.ColorSet set = ColorExtractor.SelectColors(source);
         Color toReturn = set.Accent1;
 
-
-        // Ensure accent 1 isn't gray
-        int grayTolerance = 10;
-        if(
-            closeTo(toReturn.R, toReturn.G, grayTolerance) && 
-            closeTo(toReturn.G, toReturn.B, grayTolerance) && 
-            closeTo(toReturn.B, toReturn.R, grayTolerance))
+        // If accent1 is gray and accent2 isn't use accent 2
+        if(isGray(set.Accent1) && !isGray(set.Accent2))
         {
             toReturn = set.Accent2;
         }
         return toReturn;
+    }
+
+    /*
+     * Checks if a given color is on the grayscale
+     */
+    public static bool isGray(Color color, int tolerance = 10)
+    {
+        return closeTo(color.R, color.G, tolerance) &&
+            closeTo(color.G, color.B, tolerance) &&
+            closeTo(color.B, color.R, tolerance);
     }
 
     public static bool closeTo(int source, int target, int tolerance)

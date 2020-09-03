@@ -55,7 +55,18 @@ public class ArduinoExtension
     {
         ArduinoDataPacket toReturn = new ArduinoDataPacket();
 
-        // Pull list of application audio sessions from default devices
+        // Pull list of audio devices
+        toReturn.defaultDevice = deviceManager.Default.DisplayName;
+        foreach(IAudioDevice currDevice in deviceManager.Devices) {
+            toReturn.audioDevices.Add(currDevice.DisplayName);
+        }
+        if(toReturn.audioDevices.Count > 6)
+        {
+            toReturn.audioDevices.RemoveRange(6, toReturn.audioDevices.Count - 6);
+        }
+        toReturn.deviceCount = toReturn.audioDevices.Count;
+
+        // Pull list of application audio sessions from default device
         IAudioDevice device = deviceManager.Default;
         HashSet<IAudioDeviceSession> sessions = device.Groups.ToSet();
 
@@ -97,6 +108,8 @@ public class ArduinoExtension
             toReturn.applications.RemoveAt(i);
         }
         toReturn.size = toReturn.applications.Count;
+
+        toReturn.time = (DateTime.Now.Hour * 60 * 60 * 1000) + (DateTime.Now.Minute * 60 * 1000) + (DateTime.Now.Second * 1000) + DateTime.Now.Millisecond;
 
         arduinoDataPacket = toReturn;
     }
@@ -140,6 +153,18 @@ public class ArduinoExtension
                 VolumeChangeRequest volumeChangeRequest = JsonConvert.DeserializeObject<VolumeChangeRequest>(json);
                 IAudioDeviceSession session = arduinoDataPacket.applications[volumeChangeRequest.index].getSession();
                 session.Volume = volumeChangeRequest.volume / 100;
+                break;
+
+            case "device_change":
+                DeviceChangeRequest deviceChangeRequest = JsonConvert.DeserializeObject<DeviceChangeRequest>(json);
+                foreach(IAudioDevice device in deviceManager.Devices)
+                {
+                    if(device.DisplayName.Equals(deviceChangeRequest.deviceName))
+                    {
+                        deviceManager.Default = device;
+                        break;
+                    }
+                }
                 break;
 
             default: break;

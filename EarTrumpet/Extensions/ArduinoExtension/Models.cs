@@ -13,11 +13,16 @@ public class Models
     {
         public string type = "data";
         public int size;
+        public string defaultDevice;
         public List<AppData> applications;
+        public List<string> audioDevices;
+        public int deviceCount;
+        public int time; // Time as millis into day
 
         public ArduinoDataPacket()
         {
             this.applications = new List<AppData>();
+            this.audioDevices = new List<string>();
         }
 
         public ArduinoDataPacket(List<AppData> appData)
@@ -101,6 +106,13 @@ public class Models
         public string type;
         public int index;
         public float volume;
+    }
+
+    [Serializable()]
+    public class DeviceChangeRequest
+    {
+        public string type;
+        public string deviceName;
     }
 
     /*
