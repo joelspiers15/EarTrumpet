@@ -115,6 +115,14 @@ public class Models
         public string deviceName;
     }
 
+    [Serializable()]
+    public class LogRequest
+    {
+        public string type;
+        public int level;
+        public string message;
+    }
+
     /*
      * Class to define app override settings
      */

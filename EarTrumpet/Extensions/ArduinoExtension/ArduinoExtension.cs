@@ -19,6 +19,7 @@ public class ArduinoExtension
     ArduinoSerialController serialController;
 
     const int defaultPriority = 5;
+
     Dictionary<String, AppOverride> appOverrides = new Dictionary<string, AppOverride>();
 
     /*
@@ -165,6 +166,11 @@ public class ArduinoExtension
                         break;
                     }
                 }
+                break;
+
+            case "log":
+                LogRequest logRequest = JsonConvert.DeserializeObject<LogRequest>(json);
+                Console.WriteLine("ArduinoLog: " + logRequest.message);
                 break;
 
             default: break;
