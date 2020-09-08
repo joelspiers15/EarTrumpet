@@ -123,6 +123,13 @@ public class Models
         public string message;
     }
 
+    [Serializable()]
+    public class ArduinoConfig
+    {
+        public string portName;
+        public List<AppOverride> appOverrides;
+    }
+
     /*
      * Class to define app override settings
      */

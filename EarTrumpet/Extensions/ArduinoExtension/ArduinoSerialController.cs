@@ -15,22 +15,28 @@ public class ArduinoSerialController
     SerialPort serialPort;
     ArduinoExtension mainExtension;
 
-    private readonly object serialLock = new object();
+    Thread connectThread;
+    //Thread readThread;
+
+    private readonly object readLock = new object();
+    private readonly object writeLock = new object();
+    private bool imageTransmitting;
 
     /*
      * Default constructor
      */
-    public ArduinoSerialController(ArduinoExtension mainExtension)
+    public ArduinoSerialController(ArduinoExtension mainExtension, string portName)
     {
         this.mainExtension = mainExtension;
+        imageTransmitting = false;
 
         // Serial port setup
         serialPort = new SerialPort();
         serialPort.BaudRate = 74880;
-        serialPort.PortName = "COM5";
+        serialPort.PortName = portName;
 
         // Spin up thread to repeatedly attempt connection
-        Thread connectThread = new Thread(SerialConnectThread);
+        connectThread = new Thread(SerialConnectThread);
         connectThread.Start();
     }
 
@@ -43,41 +49,52 @@ public class ArduinoSerialController
         {
             try
             {
+                // Try opening a port
                 Console.WriteLine("Attempting serial connection");
                 serialPort.Open();
                 Console.WriteLine("Serial port opened");
-                Thread readThread = new Thread(SerialReadThread);
+
+                // Add event listeners
+                serialPort.DataReceived += SerialMessageRecieved;
+                serialPort.ErrorReceived += handleDisconnect;
+
+                // Wait for arduino to boot then send data
                 Thread.Sleep(15000);
                 mainExtension.refreshDataPacket();
                 sendUpdatePacket();
-                readThread.Start();
                 return;
             }
             catch (Exception)
             {
+                // Failed to open port, wait 5 seconds then try again
                 Thread.Sleep(5000);
             }
         }
     }
 
-    
-    public void SerialReadThread()
+    public void SerialMessageRecieved(object sender, SerialDataReceivedEventArgs e)
     {
-        while (serialPort.IsOpen)
+        if(imageTransmitting)
         {
-            try
+            // A message coming in while image is transmitting is likely a line acknowlegment byte, not a JSON message
+            return;
+        }
+
+        String message = "undefined";
+        try
+        {
+            lock (readLock)
             {
-                string message = serialPort.ReadLine();
-                Console.WriteLine("Serial <--: " + message);
-                mainExtension.HandleMessage(message);
+                Console.WriteLine("Read thread got lock");
+                message = serialPort.ReadLine();
+                Console.WriteLine("Read thread releasing lock");
             }
-            catch (System.IO.IOException)
-            {
-                // Failed to read due to disconnect
-                handleDisconnect();
-            }
-            catch (Exception)
-            { }
+            Thread handleMessageThread = new Thread(() => mainExtension.HandleMessage(message));
+            handleMessageThread.Start();
+        }
+        catch (Exception) {
+            Console.WriteLine("WARNING: Failed to parse serial message");
+            Console.WriteLine("\t" + message);
         }
     }
 
@@ -85,15 +102,18 @@ public class ArduinoSerialController
      * Handle error with Serial port
      * Closes port then spins up a new Connect thread to wait for reconnection
      */
-    public void handleDisconnect()
+    public void handleDisconnect(object sender, SerialErrorReceivedEventArgs e)
     {
-        Console.WriteLine("Serial port write error. Closing port");
+        // Cleanup from the old connection
+        Console.WriteLine("Serial port error. Closing port");
         try
         {
             serialPort.Close();
         }
         catch (Exception)
         { }
+
+        // Spin up a new thread to attempt connections
         Thread connectThread = new Thread(SerialConnectThread);
         connectThread.Start();
     }
@@ -107,16 +127,18 @@ public class ArduinoSerialController
         {
             // Serialize data into json object and ship it
             string packet = JsonConvert.SerializeObject(mainExtension.arduinoDataPacket);
-            lock (serialLock)
+            lock(writeLock)
             {
+                Console.WriteLine("sendUpdatePacket got lock");
                 Console.WriteLine("Serial -->: " + packet);
                 serialPort.Write(packet);
+                Console.WriteLine("sendUpdatePacket released lock");
             }
             return true;
         }
         catch (Exception)
         {
-            handleDisconnect();
+            handleDisconnect(null, null);
             return false;
         }
     }
@@ -140,7 +162,7 @@ public class ArduinoSerialController
         watch.Start();
 
         //Transfer image
-        lock (serialLock)
+        lock (writeLock)
         {
             for (int y = 0; y < iconBitmap.Height; y++)
             {
@@ -156,19 +178,32 @@ public class ArduinoSerialController
                     row.Add(color16bit[0]);
                     row.Add(color16bit[1]);
                 }
-
-                // Send row of pixels
-                serialPort.Write(row.ToArray(), 0, row.Count);
-
-                //Expect acknowledgement of line
-                while (serialPort.BytesToRead < 1)
-                { Thread.Sleep(1); }
-                Byte ack = (Byte)serialPort.ReadByte();
-                if (ack != 0xFF)
+                lock (readLock)
                 {
-                    Console.WriteLine("Ack not 0xFF, ending transmission");
-                    return;
+                    Console.WriteLine("sendIcon got lock");
+                    imageTransmitting = true;
+
+                    // Send row of pixels
+                    serialPort.Write(row.ToArray(), 0, row.Count);
+
+                    //Expect acknowledgement of line
+                    while (serialPort.BytesToRead < 1)
+                    { Thread.Sleep(1); }
+                    Byte ack = (Byte)serialPort.ReadByte();
+                    if (ack != 0xFF)
+                    {
+                        Console.WriteLine(String.Format("Ack not 0xFF, got 0x{0:x} . ending transmission", ack));
+                        return;
+                    }
+
+                    Console.WriteLine("sendIcon releasing lock");
+                    imageTransmitting = false;
                 }
+
+                //if(serialPort.BytesToRead > 0)
+                //{
+                //    SerialMessageRecieved(null, null);
+                //}
             }
             // Tell arduino transmission is done
             serialPort.Write(new byte[] { 0xFF }, 0, 1);
@@ -178,6 +213,11 @@ public class ArduinoSerialController
         watch.Stop();
         Console.WriteLine("Finished transmission, average line write ms = " + watch.ElapsedMilliseconds / iconSize);
         Console.WriteLine(String.Format("{0:F2} KB/S", ((iconSize * iconSize * 2.0) / 1000) / (watch.ElapsedMilliseconds / 1000)));
+    }
+
+    public bool isOpen()
+    {
+        return serialPort.IsOpen;
     }
 }
 

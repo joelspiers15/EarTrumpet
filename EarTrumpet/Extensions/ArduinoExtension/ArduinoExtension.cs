@@ -32,21 +32,32 @@ public class ArduinoExtension
         this.deviceManager.DefaultChanged += handleDefaultDeviceChange;
         this.deviceManager.Default.Groups.CollectionChanged += handleAppSessionChange;
 
-        using (StreamReader file = File.OpenText("./AppOverrides.json"))
+        // Read config file
+        String portName = "";
+        try
         {
-            JsonSerializer serializer = new JsonSerializer();
-            List<AppOverride> overrides = (List<AppOverride>)serializer.Deserialize(file, typeof(List<AppOverride>));
-            foreach(AppOverride @override in overrides)
+            using (StreamReader file = File.OpenText("./ArduinoConfig.json"))
             {
-                appOverrides.Add(@override.name, @override);
+                JsonSerializer serializer = new JsonSerializer();
+                ArduinoConfig config = (ArduinoConfig)serializer.Deserialize(file, typeof(ArduinoConfig));
+
+                portName = config.portName;
+                foreach (AppOverride @override in config.appOverrides)
+                {
+                    appOverrides.Add(@override.name, @override);
+                }
             }
+        } catch(Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return;
         }
 
         //Data model setup
         refreshDataPacket();
 
         //Serial port setup
-        serialController = new ArduinoSerialController(this);
+        serialController = new ArduinoSerialController(this, portName);
     }
 
     /*

@@ -1,0 +1,72 @@
+﻿{
+	"portName": "COM5",
+	"appOverrides": [
+		{
+			"name": "Spotify",
+			"priority": 0
+		},
+		{
+			"name": "Google Chrome",
+			"name_override": "Chrome",
+			"priority": 1
+		},
+		{
+			"name": "Discord",
+			"priority": 2
+		},
+		{
+			"name": "steam",
+			"name_override": "Steam",
+			"priority": 6
+		},
+		{
+			"name": "System Sounds",
+			"name_override": "System",
+			"priority": 10
+		},
+		{
+			"name": "Blizzard Battle.net",
+			"name_override": "Battle.net",
+			"priority": 11
+		},
+		{
+			"name": "SocialClubHelper",
+			"name_override": "Social Club",
+			"priority": 11
+		},
+		{
+			"name": "Launcher",
+			"priority": 11
+		},
+		{
+			"name": "Origin",
+			"priority": 11
+		},
+		{
+			"name": "Razer Synapse",
+			"name_override": "Synapse",
+			"priority": 12
+		},
+		{
+			"name": "ChromaVisualizer",
+			"name_override": "Chroma",
+			"priority": 12
+		},
+		{
+			"name": "VLC media player",
+			"name_override": "VLC"
+		},
+		{
+			"name": "Red Dead Redemption 2",
+			"name_override": "Red Dead 2"
+		},
+		{
+			"name": "conhost",
+			"name_override": "Console"
+		},
+		{
+			"name": "TwitchUI",
+			"name_override": "Twitch"
+		}
+	]
+}
