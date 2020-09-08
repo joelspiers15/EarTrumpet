@@ -93,7 +93,7 @@ public class Models
     [Serializable()]
     public class IconRequest
     {
-        public string type;
+        public const string type = "icon_request";
         public int index;
     }
 
@@ -103,7 +103,7 @@ public class Models
     [Serializable()]
     public class VolumeChangeRequest
     {
-        public string type;
+        public const string type = "volume_change";
         public int index;
         public float volume;
     }
@@ -111,14 +111,20 @@ public class Models
     [Serializable()]
     public class DeviceChangeRequest
     {
-        public string type;
+        public const string type = "device_change";
         public string deviceName;
+    }
+
+    [Serializable()]
+    public class UpdateRequest
+    {
+        public const string type = "update_request";
     }
 
     [Serializable()]
     public class LogRequest
     {
-        public string type;
+        public const string type = "log";
         public int level;
         public string message;
     }

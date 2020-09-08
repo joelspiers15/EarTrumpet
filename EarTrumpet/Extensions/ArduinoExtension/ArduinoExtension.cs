@@ -147,7 +147,7 @@ public class ArduinoExtension
         GenericRequest packet = JsonConvert.DeserializeObject<GenericRequest>(json);
         switch (packet.type)
         {
-            case "icon_request":
+            case IconRequest.type:
                 IconRequest iconRequest = JsonConvert.DeserializeObject<IconRequest>(json);
 
                 // Grab bitmap from exe and transmit over serial
@@ -161,13 +161,13 @@ public class ArduinoExtension
 
                 break;
 
-            case "volume_change":
+            case VolumeChangeRequest.type:
                 VolumeChangeRequest volumeChangeRequest = JsonConvert.DeserializeObject<VolumeChangeRequest>(json);
                 IAudioDeviceSession session = arduinoDataPacket.applications[volumeChangeRequest.index].getSession();
                 session.Volume = volumeChangeRequest.volume / 100;
                 break;
 
-            case "device_change":
+            case DeviceChangeRequest.type:
                 DeviceChangeRequest deviceChangeRequest = JsonConvert.DeserializeObject<DeviceChangeRequest>(json);
                 foreach(IAudioDevice device in deviceManager.Devices)
                 {
@@ -179,7 +179,12 @@ public class ArduinoExtension
                 }
                 break;
 
-            case "log":
+            case UpdateRequest.type:
+                refreshDataPacket();
+                serialController.sendUpdatePacket();
+                break;
+
+            case LogRequest.type:
                 LogRequest logRequest = JsonConvert.DeserializeObject<LogRequest>(json);
                 Console.WriteLine("ArduinoLog: " + logRequest.message);
                 break;
