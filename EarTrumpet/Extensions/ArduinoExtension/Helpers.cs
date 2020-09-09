@@ -4,7 +4,7 @@ using System.Drawing;
 using EarTrumpet.Interop;
 using System.Text;
 
-using static Models;
+using static SerialPacket;
 using System.Runtime.InteropServices;
 using TsudaKageyu;
 using System.Collections.Generic;

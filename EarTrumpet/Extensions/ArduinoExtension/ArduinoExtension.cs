@@ -6,7 +6,8 @@ using Newtonsoft.Json;
 using System.Collections.Specialized;
 using System.Drawing;
 
-using static Models;
+using static Config;
+using static SerialPacket;
 using static Helpers;
 using EarTrumpet.Extensions;
 using System.IO;

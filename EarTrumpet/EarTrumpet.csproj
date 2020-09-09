@@ -121,7 +121,8 @@
     <Compile Include="Extensions\ArduinoExtension\ArduinoSerialController.cs" />
     <Compile Include="Extensions\ArduinoExtension\Helpers.cs" />
     <Compile Include="Extensions\ArduinoExtension\ArduinoExtension.cs" />
-    <Compile Include="Extensions\ArduinoExtension\Models.cs" />
+    <Compile Include="Extensions\ArduinoExtension\Models\Config.cs" />
+    <Compile Include="Extensions\ArduinoExtension\Models\SerialPacket.cs" />
     <Compile Include="Extensions\EventBinding\EventBindingExtension.cs" />
     <Compile Include="Extensions\EventBinding\HandledEventBindingExtension.cs" />
     <Compile Include="Extensions\FrameworkElementExtensions.cs" />

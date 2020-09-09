@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-public class Models
+public class SerialPacket
 {
     /*
      * Full packet to be sent to arduino
@@ -127,23 +127,5 @@ public class Models
         public const string type = "log";
         public int level;
         public string message;
-    }
-
-    [Serializable()]
-    public class ArduinoConfig
-    {
-        public string portName;
-        public List<AppOverride> appOverrides;
-    }
-
-    /*
-     * Class to define app override settings
-     */
-    [Serializable()]
-    public class AppOverride
-    {
-        public string name;
-        public string name_override;
-        public int? priority;
     }
 }
